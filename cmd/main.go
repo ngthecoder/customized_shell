@@ -39,6 +39,8 @@ func main() {
 			fmt.Fprintln(os.Stdout, strings.Join(command.Args, " "))
 		case "type":
 			showCommandType(command.Args[0], paths)
+		case "pwd":
+			showCurrentDir()
 		default:
 			cmd := exec.Command(command.Name, command.Args...)
 			cmd.Stdout = os.Stdout
@@ -68,8 +70,17 @@ func parseInput(input string) Command {
 	}
 }
 
+func showCurrentDir() {
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(dir)
+}
+
 func showCommandType(commandToSearch string, paths []string) {
-	cmds := []string{"exit", "echo", "type"}
+	cmds := []string{"exit", "echo", "type", "pwd"}
 	for _, cmd := range cmds {
 		if commandToSearch == cmd {
 			fmt.Fprintf(os.Stdout, "%s is a shell builtin\n", commandToSearch)
