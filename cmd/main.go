@@ -43,9 +43,9 @@ func main() {
 			showCurrentDir()
 		case "cd":
 			if len(command.Args) == 0 {
-				moveToDir(home)
+				moveToDir(home, home)
 			} else if len(command.Args) == 1 {
-				moveToDir(command.Args[0])
+				moveToDir(command.Args[0], home)
 			} else {
 				fmt.Fprintln(os.Stdout, "cd: wrong number of arguments")
 			}
@@ -87,7 +87,10 @@ func showCurrentDir() {
 	fmt.Println(dir)
 }
 
-func moveToDir(path string) {
+func moveToDir(path string, home string) {
+	if path == "~" {
+		path = home
+	}
 	err := os.Chdir(path)
 	if err != nil {
 		fmt.Println(err)
