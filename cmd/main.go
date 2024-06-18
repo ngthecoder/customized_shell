@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -20,44 +21,25 @@ func main() {
 
 		inputWithDelimiter, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			return
 		}
 
-		command := parseInput(strings.Trim(inputWithDelimiter, "\n"))
+		command := parseInput(strings.TrimSpace(inputWithDelimiter))
 
 		switch command.Name {
 		case "exit":
-			if len(command.Args) == 1 && command.Args[0] == "0" {
-				return
-			} else if len(command.Args) != 1 {
-				fmt.Fprintln(os.Stdout, "exit: wrong number of arguments")
-			} else {
-				fmt.Fprintln(os.Stdout, "exit: invalid argument")
-			}
+			handleExit(command)
 		case "echo":
-			fmt.Fprintln(os.Stdout, strings.Join(command.Args, " "))
+			handleEcho(command)
 		case "type":
-			showCommandType(command.Args[0], paths)
+			handleType(command, paths)
 		case "pwd":
-			showCurrentDir()
+			handlePwd()
 		case "cd":
-			if len(command.Args) == 0 {
-				moveToDir(home, home)
-			} else if len(command.Args) == 1 {
-				moveToDir(command.Args[0], home)
-			} else {
-				fmt.Fprintln(os.Stdout, "cd: wrong number of arguments")
-			}
+			handleCd(command, home)
 		default:
-			cmd := exec.Command(command.Name, command.Args...)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Stdin = os.Stdin
-			err := cmd.Run()
-			if err != nil {
-				fmt.Fprintf(os.Stdout, "%s: command not found\n", command.Name)
-			}
+			handleExternalCommand(command)
 		}
 	}
 }
@@ -70,34 +52,65 @@ func loadEnv() ([]string, string) {
 }
 
 func parseInput(input string) Command {
-	parts := strings.Split(input, " ")
-
+	parts := strings.Fields(input)
+	if len(parts) == 0 {
+		return Command{}
+	}
 	return Command{
 		Name: parts[0],
 		Args: parts[1:],
 	}
 }
 
-func showCurrentDir() {
+func handleExit(command Command) {
+	if len(command.Args) == 1 && command.Args[0] == "0" {
+		os.Exit(0)
+	} else if len(command.Args) != 1 {
+		fmt.Fprintln(os.Stderr, "exit: wrong number of arguments")
+	} else {
+		fmt.Fprintln(os.Stderr, "exit: invalid argument")
+	}
+}
+
+func handleEcho(command Command) {
+	fmt.Fprintln(os.Stdout, strings.Join(command.Args, " "))
+}
+
+func handlePwd() {
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		return
 	}
 	fmt.Println(dir)
 }
 
-func moveToDir(path string, home string) {
-	if path == "~" {
-		path = home
-	}
-	err := os.Chdir(path)
-	if err != nil {
-		fmt.Println(err)
+func handleCd(command Command, home string) {
+	if len(command.Args) == 0 {
+		moveToDir(home)
+	} else if len(command.Args) == 1 {
+		moveToDir(command.Args[0])
+	} else {
+		fmt.Fprintln(os.Stderr, "cd: wrong number of arguments")
 	}
 }
 
-func showCommandType(commandToSearch string, paths []string) {
+func moveToDir(path string) {
+	if path == "~" {
+		path = os.Getenv("HOME")
+	}
+	err := os.Chdir(filepath.Clean(path))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cd: %s: No such file or directory\n", path)
+	}
+}
+
+func handleType(command Command, paths []string) {
+	if len(command.Args) != 1 {
+		fmt.Fprintln(os.Stderr, "type: invalid number of arguments")
+		return
+	}
+	commandToSearch := command.Args[0]
 	cmds := []string{"exit", "echo", "type", "pwd", "cd"}
 	for _, cmd := range cmds {
 		if commandToSearch == cmd {
@@ -106,10 +119,22 @@ func showCommandType(commandToSearch string, paths []string) {
 		}
 	}
 	for _, path := range paths {
-		if _, err := os.Stat(path + "/" + commandToSearch); err == nil {
-			fmt.Fprintf(os.Stdout, "%s is %s/%s\n", commandToSearch, path, commandToSearch)
+		fullPath := filepath.Join(path, commandToSearch)
+		if _, err := os.Stat(fullPath); err == nil {
+			fmt.Fprintf(os.Stdout, "%s is %s\n", commandToSearch, fullPath)
 			return
 		}
 	}
 	fmt.Fprintf(os.Stdout, "%s: not found\n", commandToSearch)
+}
+
+func handleExternalCommand(command Command) {
+	cmd := exec.Command(command.Name, command.Args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: command not found\n", command.Name)
+	}
 }
