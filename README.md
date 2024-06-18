@@ -67,9 +67,21 @@ go build -o ../customized_shell
 ../customized_shell
 ```
 
-### Testing
+## Testing
 
-Currently, there are no automated tests included. Testing can be performed manually by running the shell and executing commands to ensure they behave as expected.
+To run the automated tests, use the following command:
+
+```sh
+go test ./...
+```
+
+To see test coverage, use:
+
+```sh
+go test -cover ./...
+```
+
+By adding automated tests, you can ensure that your code behaves as expected and catch any regressions early in the development process.
 
 ## Contributing
 
