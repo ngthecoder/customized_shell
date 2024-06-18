@@ -13,6 +13,7 @@ type Command struct {
 }
 
 func main() {
+	paths, _ := loadEnv()
 	for {
 		fmt.Print("$ ")
 
@@ -36,11 +37,18 @@ func main() {
 		case "echo":
 			fmt.Fprintln(os.Stdout, strings.Join(command.Args, " "))
 		case "type":
-			showCommandType(command)
+			showCommandType(command.Args[0], paths)
 		default:
 			fmt.Fprintf(os.Stdout, "%s: command not found\n", command.Name)
 		}
 	}
+}
+
+func loadEnv() ([]string, string) {
+	path := os.Getenv("PATH")
+	paths := strings.Split(path, ":")
+	home := os.Getenv("HOME")
+	return paths, home
 }
 
 func parseInput(input string) Command {
@@ -52,13 +60,19 @@ func parseInput(input string) Command {
 	}
 }
 
-func showCommandType(command Command) {
+func showCommandType(commandToSearch string, paths []string) {
 	cmds := []string{"exit", "echo", "type"}
 	for _, cmd := range cmds {
-		if command.Name == cmd {
-			fmt.Fprintf(os.Stdout, "%s is a shell builtin\n", command.Name)
+		if commandToSearch == cmd {
+			fmt.Fprintf(os.Stdout, "%s is a shell builtin\n", commandToSearch)
 			return
 		}
 	}
-	fmt.Fprintf(os.Stdout, "%s: not found\n", command.Name)
+	for _, path := range paths {
+		if _, err := os.Stat(path + "/" + commandToSearch); err == nil {
+			fmt.Fprintf(os.Stdout, "%s is %s/%s\n", commandToSearch, path, commandToSearch)
+			return
+		}
+	}
+	fmt.Fprintf(os.Stdout, "%s: not found\n", commandToSearch)
 }
