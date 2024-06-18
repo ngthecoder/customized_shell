@@ -25,43 +25,30 @@ func TestHandlePwd(t *testing.T) {
 
 func TestHandleCd(t *testing.T) {
 	home := os.Getenv("HOME")
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("could not get current directory: %v", err)
-	}
-
-	startDir := filepath.Join(home, "Desktop", "codes", "customized_shell", "internal")
-	if err := os.Chdir(startDir); err != nil {
-		t.Fatalf("could not change to start directory: %v", err)
-	}
+	originalDir, _ := os.Getwd()
 
 	tests := []struct {
-		name     string
 		path     string
 		expected string
 	}{
-		{name: "home", path: home, expected: home},
-		{name: "current", path: ".", expected: startDir},
-		{name: "parent", path: "..", expected: filepath.Dir(startDir)},
+		{path: home, expected: home},
+		{path: ".", expected: originalDir},
+		{path: "..", expected: filepath.Dir(originalDir)},
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if err := os.Chdir(startDir); err != nil {
-				t.Fatalf("could not change to start directory: %v", err)
-			}
+		if err := os.Chdir(originalDir); err != nil {
+			t.Fatalf("could not change to original directory: %v", err)
+		}
 
-			moveToDir(test.path)
-			dir, _ := os.Getwd()
-			if dir != filepath.Clean(test.expected) {
-				t.Errorf("moveToDir(%s) = %s; want %s", test.path, dir, test.expected)
-			}
-		})
+		moveToDir(test.path)
+		dir, _ := os.Getwd()
+		if dir != filepath.Clean(test.expected) {
+			t.Errorf("moveToDir(%s) = %s; want %s", test.path, dir, test.expected)
+		}
 	}
 
-	if err := os.Chdir(originalDir); err != nil {
-		t.Fatalf("could not change back to original directory: %v", err)
-	}
+	os.Chdir(originalDir)
 }
 
 func TestHandleEcho(t *testing.T) {
