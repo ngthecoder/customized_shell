@@ -33,6 +33,8 @@ func main() {
 			} else {
 				fmt.Println("exit: invalid argument")
 			}
+		case "echo":
+			fmt.Println(strings.Join(command.Args, " "))
 		default:
 			fmt.Fprintf(os.Stdout, "%s: command not found\n", command.Name)
 		}
