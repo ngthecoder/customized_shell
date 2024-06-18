@@ -14,7 +14,7 @@ type Command struct {
 }
 
 func main() {
-	paths, _ := loadEnv()
+	paths, home := loadEnv()
 	for {
 		fmt.Print("$ ")
 
@@ -41,6 +41,14 @@ func main() {
 			showCommandType(command.Args[0], paths)
 		case "pwd":
 			showCurrentDir()
+		case "cd":
+			if len(command.Args) == 0 {
+				moveToDir(home)
+			} else if len(command.Args) == 1 {
+				moveToDir(command.Args[0])
+			} else {
+				fmt.Fprintln(os.Stdout, "cd: wrong number of arguments")
+			}
 		default:
 			cmd := exec.Command(command.Name, command.Args...)
 			cmd.Stdout = os.Stdout
@@ -79,8 +87,15 @@ func showCurrentDir() {
 	fmt.Println(dir)
 }
 
+func moveToDir(path string) {
+	err := os.Chdir(path)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
 func showCommandType(commandToSearch string, paths []string) {
-	cmds := []string{"exit", "echo", "type", "pwd"}
+	cmds := []string{"exit", "echo", "type", "pwd", "cd"}
 	for _, cmd := range cmds {
 		if commandToSearch == cmd {
 			fmt.Fprintf(os.Stdout, "%s is a shell builtin\n", commandToSearch)
